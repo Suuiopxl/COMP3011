@@ -32,9 +32,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row 
     return conn
 
-# ==========================================
-# CRUD Endpoints [cite: 69, 72]
-# ==========================================
+# CRUD Endpoints
 
 # 1. READ (Get Multiple Items)
 @app.get("/laptops", response_model=List[LaptopResponse], status_code=status.HTTP_200_OK, tags=["Laptops"])
@@ -125,4 +123,4 @@ def delete_laptop(laptop_id: int):
     
     if rows_affected == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop not found. Cannot delete.")
-    return # 204 No Content doesn't require a JSON body
+    return
