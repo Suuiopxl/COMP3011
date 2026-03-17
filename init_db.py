@@ -38,7 +38,7 @@ def setup_database():
 
     conn.commit()
     conn.close()
-    print("Database initialization completed successfully! The schema is now highly robust.")
+    print("Database initialization completed successfully!")
 
 if __name__ == "__main__":
     setup_database()

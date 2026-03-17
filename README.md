@@ -8,10 +8,11 @@ This project is an individual Web Services API developed for the COMP3011 module
 * **Database:** SQLite3
 * **Data Processing:** Pandas (for initial CSV to SQLite migration)
 * **Server:** Uvicorn
+* **Deployment:** Currently deploying on Render's free tier (Available at: https://comp3011-gaming-laptops-api-2026.onrender.com/docs)
 
 ## Deliverables & API Documentation
 As per the coursework requirements, the generated API documentation is provided as a PDF file. 
-* **API Documentation:** [Link to PDF file](./2026_Q1_Gaming_Laptops_Market_API_-_Swagger_UI.pdf)
+* **API Documentation:** [Link to PDF file](./API_DOC.pdf)
 
 ## Setup and Installation Instructions
 Please follow these steps to run the API locally on your machine or within a GitHub Codespaces environment:
