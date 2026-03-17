@@ -1,24 +1,9 @@
 import pandas as pd
 import sqlite3
-import os
 
 def setup_database():
-    """
-    Reads data from a CSV file, performs basic cleaning, 
-    and imports it into an SQLite database.
-    """
-    csv_file_path = "gaming_laptops_2026_q1.csv"
-    db_file_path = "laptops.db"
-
-    print(f"Loading data from {csv_file_path}...")
-    
-    # Load the CSV file into a pandas DataFrame
-    # Using pandas simplifies the process of handling CSV to SQL conversion
-    df = pd.read_csv(csv_file_path)
-
-    # Data Cleaning: Handle missing values (NaN) to prevent database constraints errors
-    # We fill numeric columns with 0 and text columns with a placeholder string
-    print("Cleaning missing values...")
+    print("Loading and cleaning data from CSV...")
+    df = pd.read_csv("gaming_laptops_2026_q1.csv")
     df.fillna(value={
         "list_price": 0.0, 
         "stars": 0.0, 
@@ -26,21 +11,34 @@ def setup_database():
         "description": "No description available"
     }, inplace=True)
 
-    print(f"Connecting to SQLite database '{db_file_path}'...")
-    # Connect to the SQLite database. It will create the file if it does not exist.
-    conn = sqlite3.connect(db_file_path)
+    print("Connecting to SQLite database 'laptops.db'...")
+    conn = sqlite3.connect("laptops.db")
+    cursor = conn.cursor()
 
-    # Write the records stored in the DataFrame to a SQL database
-    # 'if_exists="replace"' will drop the table if it already exists and recreate it
-    # 'index_label="id"' automatically generates an auto-incrementing primary key column named 'id'
+    cursor.execute("DROP TABLE IF EXISTS laptops")
+
+    cursor.execute('''
+        CREATE TABLE laptops (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            brand TEXT,
+            price REAL,
+            list_price REAL,
+            discount_pct REAL,
+            price_currency TEXT,
+            stars REAL,
+            reviews_count INTEGER,
+            breadCrumbs TEXT,
+            description TEXT
+        )
+    ''')
+
     print("Writing data to the 'laptops' table...")
-    df.to_sql("laptops", conn, if_exists="replace", index_label="id")
+    df.to_sql("laptops", conn, if_exists="append", index=False)
 
-    # Commit the transaction and close the database connection
     conn.commit()
     conn.close()
-
-    print("Database initialization completed successfully! The 'laptops.db' file is ready.")
+    print("Database initialization completed successfully! The schema is now highly robust.")
 
 if __name__ == "__main__":
     setup_database()
