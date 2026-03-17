@@ -1,17 +1,36 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 import sqlite3
+import secrets
 from typing import List
 
-# Initialize the FastAPI application with metadata for the auto-generated documentation
+# FastAPI initialization
 app = FastAPI(
     title="2026 Q1 Gaming Laptops Market API",
-    description="A RESTful API for querying and managing gaming laptop market data. Built with FastAPI and SQLite.",
+    description="A RESTful API for querying and managing gaming laptop market data. Built with FastAPI and SQLite. Features Basic Authentication for modifying data.",
     version="1.0.0"
 )
 
-# Define Pydantic models for data validation and parsing
-# This ensures that any data sent to our API strictly follows this structure
+# Authentication
+security = HTTPBasic()
+
+def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
+
+    """
+    For demonstration, using userID 'admin'
+    and password 'secret123'.
+    """
+    correct_username = secrets.compare_digest(credentials.username, "admin")
+    correct_password = secrets.compare_digest(credentials.password, "secret123")
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
 class LaptopBase(BaseModel):
     title: str
     brand: str
@@ -22,25 +41,18 @@ class LaptopBase(BaseModel):
     reviews_count: int = 0
 
 class LaptopResponse(LaptopBase):
-    id: int # The response will always include the database-generated ID
+    id: int
 
-# Helper function to establish a database connection
 def get_db_connection():
-    """Creates and returns a connection to the SQLite database."""
     conn = sqlite3.connect('laptops.db')
-    # This allows us to access columns by name (like a dictionary)
     conn.row_factory = sqlite3.Row 
     return conn
 
 # CRUD Endpoints
 
-# 1. READ (Get Multiple Items)
+# 1. READ (public access, no verification)
 @app.get("/laptops", response_model=List[LaptopResponse], status_code=status.HTTP_200_OK, tags=["Laptops"])
 def get_laptops(limit: int = 10, skip: int = 0):
-    """
-    Retrieve a list of laptops. 
-    Supports pagination via 'limit' and 'skip' query parameters.
-    """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM laptops LIMIT ? OFFSET ?", (limit, skip))
@@ -48,30 +60,21 @@ def get_laptops(limit: int = 10, skip: int = 0):
     conn.close()
     return [dict(row) for row in rows]
 
-# 2. READ (Get Single Item)
+# 2. READ (public access)
 @app.get("/laptops/{laptop_id}", response_model=LaptopResponse, status_code=status.HTTP_200_OK, tags=["Laptops"])
 def get_laptop(laptop_id: int):
-    """
-    Retrieve a specific laptop by its unique ID.
-    """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM laptops WHERE id = ?", (laptop_id,))
     row = cursor.fetchone()
     conn.close()
-    
-    # Error Handling: Return 404 if the item doesn't exist 
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop not found")
     return dict(row)
 
-# 3. CREATE (Add a New Item)
+# 3. CREATE (Requires identity verification)
 @app.post("/laptops", response_model=LaptopResponse, status_code=status.HTTP_201_CREATED, tags=["Laptops"])
-def create_laptop(laptop: LaptopBase):
-    """
-    Create a new gaming laptop entry in the database.
-    Returns the created object along with its newly generated ID.
-    """
+def create_laptop(laptop: LaptopBase, username: str = Depends(get_current_username)):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -80,18 +83,13 @@ def create_laptop(laptop: LaptopBase):
         (laptop.title, laptop.brand, laptop.price, laptop.discount_pct, laptop.price_currency, laptop.stars, laptop.reviews_count)
     )
     conn.commit()
-    new_id = cursor.lastrowid # Retrieve the auto-incremented ID
+    new_id = cursor.lastrowid
     conn.close()
-    
-    # Merge the generated ID with the input data for the response
     return {**laptop.model_dump(), "id": new_id}
 
-# 4. UPDATE (Modify an Existing Item)
+# 4. UPDATE (Requires identity verification)
 @app.put("/laptops/{laptop_id}", response_model=LaptopResponse, status_code=status.HTTP_200_OK, tags=["Laptops"])
-def update_laptop(laptop_id: int, laptop: LaptopBase):
-    """
-    Update all fields of an existing laptop by its ID.
-    """
+def update_laptop(laptop_id: int, laptop: LaptopBase, username: str = Depends(get_current_username)):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -103,24 +101,19 @@ def update_laptop(laptop_id: int, laptop: LaptopBase):
     conn.commit()
     rows_affected = cursor.rowcount
     conn.close()
-    
     if rows_affected == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop not found. Cannot update.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop not found.")
     return {**laptop.model_dump(), "id": laptop_id}
 
-# 5. DELETE (Remove an Item)
+# 5. DELETE (Requires identity verification)
 @app.delete("/laptops/{laptop_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Laptops"])
-def delete_laptop(laptop_id: int):
-    """
-    Delete a laptop from the database by its ID.
-    """
+def delete_laptop(laptop_id: int, username: str = Depends(get_current_username)):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM laptops WHERE id=?", (laptop_id,))
     conn.commit()
     rows_affected = cursor.rowcount
     conn.close()
-    
     if rows_affected == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop not found. Cannot delete.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop not found.")
     return
