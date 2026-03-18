@@ -1,14 +1,16 @@
 # COMP3011 2026 Q1 Gaming Laptops Market API
 
 ## Project Overview
-This project is an individual Web Services API developed for the COMP3011 module. It provides a RESTful API to query and manage market data for gaming laptops in Q1 2026. The API is built using Python and FastAPI, with data persistently stored in a local SQLite database. It supports full CRUD (Create, Read, Update, Delete) operations.
+This project is an individual Web Services API developed for the COMP3011 module. It provides a RESTful API and a web application to query and manage market data for gaming laptops in Q1 2026. The API is built using Python and FastAPI, with data persistently stored in a local SQLite database. It supports full CRUD (Create, Read, Update, Delete) operations and 3 advanced analysis operations.
 
 ## Technology Stack
 * **Framework:** FastAPI
 * **Database:** SQLite3
 * **Data Processing:** Pandas (for initial CSV to SQLite migration)
 * **Server:** Uvicorn
-* **Deployment:** Currently deploying on Render's free tier (Available at: https://comp3011-gaming-laptops-api-2026.onrender.com/docs)
+* **Frontend:** HTML5 & Vanilla JavaScript + Tailwind CSS + Chart.js
+* **Deployment:** Currently deploying on Render's free tier (Available at: https://comp3011-gaming-laptops-api-2026.onrender.com/)
+* **Live API Documentation:** Currently deploying on Render's free tier (Available at: https://comp3011-gaming-laptops-api-2026.onrender.com/docs)
 
 ## Deliverables & API Documentation
 As per the coursework requirements, the generated API documentation is provided as a PDF file. 
