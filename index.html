@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Gaming Laptops Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans antialiased p-6">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center border-b border-gray-700 pb-4 mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-400">Gaming Laptops Market</h1>
+                <p class="text-gray-400 text-sm mt-1">Q1 2026 Analytics Dashboard</p>
+            </div>
+            <a href="/docs" target="_blank" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded shadow transition">
+                View API Docs (Swagger)
+            </a>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="col-span-1 lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 text-gray-200">Top Brands by Average Price ($)</h2>
+                <div class="relative h-96">
+                    <canvas id="brandChart"></canvas>
+                </div>
+            </div>
+
+            <div class="col-span-1 bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 overflow-y-auto" style="max-height: 28rem;">
+                <h2 class="text-xl font-semibold mb-4 text-green-400">Top Deals (Highest Discounts)</h2>
+                <div id="dealsContainer" class="space-y-4">
+                    <p class="text-gray-400 text-sm">Loading deals...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. get brand charts
+        async function loadBrandAnalytics() {
+            try {
+                // calling API
+                const response = await fetch('/analytics/brands?min_models=2&limit=8');
+                const data = await response.json();
+
+                const labels = data.map(item => item.brand);
+                const prices = data.map(item => item.average_price);
+                const counts = data.map(item => item.total_models);
+
+                const ctx = document.getElementById('brandChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Average Price (USD)',
+                            data: prices,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)', // Tailwind Blue 500
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                            x: { grid: { display: false } }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#e5e7eb' } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading brand data:", error);
+            }
+        }
+
+        // 2. get discount list
+        async function loadTopDeals() {
+            try {
+                const response = await fetch('/analytics/top-deals?limit=5');
+                const data = await response.json();
+                
+                const container = document.getElementById('dealsContainer');
+                container.innerHTML = '';
+                data.forEach(laptop => {
+                    const html = `
+                        <div class="bg-gray-700 p-4 rounded-lg border border-gray-600 hover:border-blue-400 transition cursor-pointer">
+                            <h3 class="font-bold text-sm text-gray-100 truncate" title="${laptop.title}">${laptop.title}</h3>
+                            <div class="flex justify-between items-center mt-2">
+                                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded font-bold">
+                                    -${laptop.discount_pct}%
+                                </span>
+                                <span class="text-white font-bold">${laptop.price_currency}${laptop.price}</span>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-2 flex justify-between">
+                                <span>Brand: ${laptop.brand}</span>
+                                <span>⭐ ${laptop.stars}</span>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += html;
+                });
+            } catch (error) {
+                console.error("Error loading deals:", error);
+                document.getElementById('dealsContainer').innerHTML = '<p class="text-red-400 text-sm">Failed to load deals.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBrandAnalytics();
+            loadTopDeals();
+        });
+    </script>
+</body>
+</html>
