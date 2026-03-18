@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import FastAPI, HTTPException, status, Depends, Query
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 import sqlite3
@@ -47,6 +48,17 @@ def get_db_connection():
     conn = sqlite3.connect('laptops.db')
     conn.row_factory = sqlite3.Row 
     return conn
+
+# ==========================================
+# Frontend Route (Dashboard)
+# ==========================================
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    """
+    Serves the index.html dashboard at the root URL.
+    include_in_schema=False prevents this route from cluttering the Swagger UI.
+    """
+    return FileResponse("index.html")
 
 # CRUD Endpoints
 
@@ -117,3 +129,93 @@ def delete_laptop(laptop_id: int, username: str = Depends(get_current_username))
     if rows_affected == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Laptop not found.")
     return
+
+# 6. ADVANCED SEARCH (Dynamic SQL Querying)
+@app.get("/search", response_model=List[LaptopResponse], status_code=status.HTTP_200_OK, tags=["Advanced Analytics"])
+def search_laptops(
+    min_price: float = Query(None, description="Minimum price in USD"),
+    max_price: float = Query(None, description="Maximum price in USD"),
+    min_stars: float = Query(None, description="Minimum star rating (0-5)"),
+    brand: str = Query(None, description="Specific brand name (e.g., ASUS, MSI)")
+):
+    """
+    Advanced search endpoint demonstrating dynamic SQL WHERE clause generation.
+    Safely utilizes parameterized queries to prevent SQL injection.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Base query
+    query = "SELECT * FROM laptops WHERE 1=1"
+    parameters = []
+    
+    # Dynamically build the query based on provided filters
+    if min_price is not None:
+        query += " AND price >= ?"
+        parameters.append(min_price)
+    if max_price is not None:
+        query += " AND price <= ?"
+        parameters.append(max_price)
+    if min_stars is not None:
+        query += " AND stars >= ?"
+        parameters.append(min_stars)
+    if brand is not None:
+        # Using exact match for brand, could also use LIKE for partial matches
+        query += " AND brand = ?"
+        parameters.append(brand)
+        
+    cursor.execute(query, parameters)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+# 7. BRAND ANALYTICS (SQL Aggregation with HAVING and LIMIT)
+@app.get("/analytics/brands", status_code=status.HTTP_200_OK, tags=["Advanced Analytics"])
+def get_brand_analytics(
+    min_models: int = Query(1, description="Minimum number of laptop models the brand must have to be included"),
+    limit: int = Query(10, description="Limit the number of brands returned (e.g., Top 10 brands)")
+):
+    """
+    Aggregation endpoint demonstrating GROUP BY, HAVING, AVG, COUNT, and ORDER BY.
+    Calculates key market metrics for each laptop brand, with dynamic filtering.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = """
+        SELECT 
+            brand, 
+            COUNT(id) as total_models, 
+            ROUND(AVG(price), 2) as average_price, 
+            MAX(stars) as highest_rating
+        FROM laptops
+        GROUP BY brand
+        HAVING total_models >= ?
+        ORDER BY total_models DESC
+        LIMIT ?
+    """
+    cursor.execute(query, (min_models, limit))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+# 8. TOP DEALS (Sorting and Filtering)
+@app.get("/analytics/top-deals", response_model=List[LaptopResponse], status_code=status.HTTP_200_OK, tags=["Advanced Analytics"])
+def get_top_deals(limit: int = Query(5, description="Number of top deals to return")):
+    """
+    Retrieves the laptops with the highest discount percentages.
+    Demonstrates filtering out zero-discount items and sorting descending.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = """
+        SELECT * FROM laptops 
+        WHERE discount_pct > 0 
+        ORDER BY discount_pct DESC 
+        LIMIT ?
+    """
+    cursor.execute(query, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
