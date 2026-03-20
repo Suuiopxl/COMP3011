@@ -18,6 +18,9 @@
 
 **Presentation Slides:** [https://github.com/Suuiopxl/COMP3011/blob/main/presentation.pptx]
 
+**README File:** [https://github.com/Suuiopxl/COMP3011/blob/main/README.md]
+
+
 ---
 
 <div style="page-break-after: always;"></div>
